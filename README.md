@@ -3,4 +3,5 @@
 مشروع مادة هندسة البرمجيات.
 
 ## Team
-- Abdalqader Awad Ali Abu-hijleh
+- Abdalqader Awad
+- Ali Abu-hijleh
