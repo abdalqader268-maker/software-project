@@ -4,6 +4,3 @@
 
 ## Team
 - Abdalqader Awad Ali Abu-hijleh
-  
-- ش
-- ش
