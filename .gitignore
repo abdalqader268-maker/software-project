@@ -1,17 +1,14 @@
-# Dependencies
-node_modules/
-
 # Build output
-dist/
-build/
-
-# Environment
-.env
+target/
 
 # IDE
 .vscode/
 .idea/
+*.iml
 
 # OS
 Thumbs.db
 .DS_Store
+
+# Logs
+*.log
