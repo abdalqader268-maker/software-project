@@ -1,0 +1,180 @@
+@startuml VehicleRentalManagementSystem
+title Vehicle Rental Management System - Phase 1 Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "domain" {
+    class Manager {
+        - username : String
+        - password : String
+        - fullName : String
+        + getUsername() : String
+        + passwordMatches(candidate : String) : boolean
+        + getFullName() : String
+    }
+
+    enum VehicleStatus {
+        AVAILABLE
+        RENTED
+        UNDER_MAINTENANCE
+    }
+
+    class Vehicle {
+        - id : String
+        - plateNumber : String
+        - brand : String
+        - model : String
+        - dailyRate : BigDecimal
+        - status : VehicleStatus
+        + isAvailable() : boolean
+        + setStatus(status : VehicleStatus) : void
+    }
+
+    enum RentalStatus {
+        ACTIVE
+        COMPLETED
+    }
+
+    class Rental {
+        - id : String
+        - customerName : String
+        - customerEmail : String
+        - startDate : LocalDate
+        - endDate : LocalDate
+        - status : RentalStatus
+        + isActive() : boolean
+        + complete() : void
+    }
+
+    Vehicle --> VehicleStatus
+    Rental --> RentalStatus
+    Rental --> "1" Vehicle
+}
+
+package "persistence" {
+    interface ManagerRepository {
+        + findByUsername(username : String) : Optional<Manager>
+        + save(manager : Manager) : void
+    }
+    interface VehicleRepository {
+        + findById(id : String) : Optional<Vehicle>
+        + findAll() : List<Vehicle>
+        + save(vehicle : Vehicle) : void
+    }
+    interface RentalRepository {
+        + findById(id : String) : Optional<Rental>
+        + findAll() : List<Rental>
+        + findActiveByVehicleId(vehicleId : String) : List<Rental>
+        + save(rental : Rental) : void
+    }
+
+    class InMemoryManagerRepository
+    class InMemoryVehicleRepository
+    class InMemoryRentalRepository
+
+    ManagerRepository <|.. InMemoryManagerRepository
+    VehicleRepository <|.. InMemoryVehicleRepository
+    RentalRepository <|.. InMemoryRentalRepository
+}
+
+package "validation <<Strategy>>" {
+    class RentalRequest {
+        - customerName : String
+        - customerEmail : String
+        - startDate : LocalDate
+        - endDate : LocalDate
+    }
+
+    interface RentalValidationRule {
+        + validate(request : RentalRequest) : void
+    }
+
+    class DurationLimitRule {
+        - clock : Clock
+        - minDays : int
+        - maxDays : int
+    }
+
+    class NoOverlapRule
+
+    class RentalValidator {
+        + validate(request : RentalRequest) : void
+    }
+
+    RentalValidationRule <|.. DurationLimitRule
+    RentalValidationRule <|.. NoOverlapRule
+    RentalValidator o--> "*" RentalValidationRule
+    NoOverlapRule --> RentalRepository
+    RentalRequest --> Vehicle
+}
+
+package "notification <<Observer>>" {
+    interface RentalExpiryObserver {
+        + onRentalExpiring(rental : Rental, daysUntilExpiry : long) : void
+    }
+
+    class RentalExpiryPublisher {
+        + subscribe(observer : RentalExpiryObserver) : void
+        + unsubscribe(observer : RentalExpiryObserver) : void
+        + notifyExpiring(rental : Rental, daysUntilExpiry : long) : void
+    }
+
+    interface EmailService {
+        + sendEmail(to : String, subject : String, body : String) : void
+    }
+
+    class ConsoleEmailService
+    class EmailReminderObserver
+
+    RentalExpiryPublisher o--> "*" RentalExpiryObserver
+    RentalExpiryObserver <|.. EmailReminderObserver
+    EmailService <|.. ConsoleEmailService
+    EmailReminderObserver --> EmailService
+}
+
+package "service" {
+    class AuthService {
+        - currentManager : Manager
+        + login(username : String, password : String) : Manager
+        + logout() : void
+        + isAuthenticated() : boolean
+        + requireAuthentication() : void
+    }
+
+    class VehicleService {
+        + getAvailableVehicles() : List<Vehicle>
+        + addVehicle(vehicle : Vehicle) : void
+    }
+
+    class RentalService {
+        + rentVehicle(vehicleId : String, customerName : String,\n customerEmail : String, startDate : LocalDate,\n endDate : LocalDate) : Rental
+    }
+
+    class ExpiryReminderService {
+        - clock : Clock
+        + generateReminders(daysAhead : int) : List<Rental>
+    }
+
+    AuthService --> ManagerRepository
+    VehicleService --> VehicleRepository
+    RentalService --> VehicleRepository
+    RentalService --> RentalRepository
+    RentalService --> RentalValidator
+    RentalService --> AuthService
+    ExpiryReminderService --> RentalRepository
+    ExpiryReminderService --> RentalExpiryPublisher
+}
+
+package "presentation" {
+    class ConsoleApp {
+        + main(args : String[]) : void
+    }
+
+    ConsoleApp --> AuthService
+    ConsoleApp --> VehicleService
+    ConsoleApp --> RentalService
+    ConsoleApp --> ExpiryReminderService
+}
+
+@enduml
