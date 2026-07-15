@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -14,10 +13,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import edu.najah.vrms.TestFixtures;
 import edu.najah.vrms.domain.Manager;
 import edu.najah.vrms.domain.Rental;
 import edu.najah.vrms.domain.RentalStatus;
-import edu.najah.vrms.domain.Vehicle;
 import edu.najah.vrms.domain.VehicleStatus;
 import edu.najah.vrms.domain.exception.InvalidRentalPeriodException;
 import edu.najah.vrms.domain.exception.UnauthorizedActionException;
@@ -64,8 +63,7 @@ class RentalServiceTest {
 
         vehicleRepository = new InMemoryVehicleRepository();
         rentalRepository = new InMemoryRentalRepository();
-        vehicleRepository.save(new Vehicle("V-1", "NAB-1234", "Toyota", "Corolla",
-                new BigDecimal("35.00"), VehicleStatus.AVAILABLE));
+        vehicleRepository.save(TestFixtures.availableCorolla());
 
         InMemoryManagerRepository managerRepository = new InMemoryManagerRepository();
         managerRepository.save(new Manager("admin", "admin123", "Fleet Manager"));

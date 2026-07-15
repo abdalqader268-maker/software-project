@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -18,8 +17,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import edu.najah.vrms.TestFixtures;
 import edu.najah.vrms.domain.Vehicle;
-import edu.najah.vrms.domain.VehicleStatus;
 import edu.najah.vrms.domain.exception.InvalidRentalPeriodException;
 
 /**
@@ -60,8 +59,7 @@ class DurationLimitRuleTest {
      * @return the rental request
      */
     private RentalRequest request(LocalDate start, LocalDate end) {
-        Vehicle vehicle = new Vehicle("V-1", "NAB-1234", "Toyota", "Corolla",
-                new BigDecimal("35.00"), VehicleStatus.AVAILABLE);
+        Vehicle vehicle = TestFixtures.availableCorolla();
         return new RentalRequest(vehicle, "Ahmad Ali", "ahmad@example.com", start, end);
     }
 

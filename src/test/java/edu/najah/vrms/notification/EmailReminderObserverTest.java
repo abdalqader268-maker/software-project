@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +16,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import edu.najah.vrms.TestFixtures;
 import edu.najah.vrms.domain.Rental;
 import edu.najah.vrms.domain.Vehicle;
 import edu.najah.vrms.domain.VehicleStatus;
@@ -41,8 +41,7 @@ class EmailReminderObserverTest {
     @Test
     @DisplayName("US3.1 - an expiry event produces one reminder e-mail to the customer")
     void expiryEventProducesReminderEmail() {
-        Vehicle vehicle = new Vehicle("V-1", "NAB-1234", "Toyota", "Corolla",
-                new BigDecimal("35.00"), VehicleStatus.RENTED);
+        Vehicle vehicle = TestFixtures.corolla("V-1", "NAB-1234", VehicleStatus.RENTED);
         Rental rental = new Rental("R-1", vehicle, "Ahmad Ali", "ahmad@example.com",
                 LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 16));
         EmailReminderObserver observer = new EmailReminderObserver(emailService);
@@ -61,8 +60,7 @@ class EmailReminderObserverTest {
     @Test
     @DisplayName("US3.1 - a rental expiring today is worded accordingly")
     void expiryTodayIsWordedAccordingly() {
-        Vehicle vehicle = new Vehicle("V-1", "NAB-1234", "Toyota", "Corolla",
-                new BigDecimal("35.00"), VehicleStatus.RENTED);
+        Vehicle vehicle = TestFixtures.corolla("V-1", "NAB-1234", VehicleStatus.RENTED);
         Rental rental = new Rental("R-1", vehicle, "Ahmad Ali", "ahmad@example.com",
                 LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 14));
         EmailReminderObserver observer = new EmailReminderObserver(emailService);
