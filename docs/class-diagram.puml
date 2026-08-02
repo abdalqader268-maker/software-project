@@ -1,5 +1,5 @@
 @startuml VehicleRentalManagementSystem
-title Vehicle Rental Management System - Phase 1 Class Diagram
+title Vehicle Rental Management System - Phase 2 Class Diagram
 
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
@@ -20,16 +20,40 @@ package "domain" {
         UNDER_MAINTENANCE
     }
 
-    class Vehicle {
+    abstract class Vehicle {
         - id : String
         - plateNumber : String
         - brand : String
         - model : String
         - dailyRate : BigDecimal
         - status : VehicleStatus
+        + {abstract} getCategory() : String
+        + checkRentalEligibility(age : int, specialLicense : boolean) : void
         + isAvailable() : boolean
         + setStatus(status : VehicleStatus) : void
     }
+
+    class Car
+    class Van
+    class Motorcycle {
+        + {static} MINIMUM_RIDER_AGE : int
+        + checkRentalEligibility(age : int, specialLicense : boolean) : void
+    }
+    class Truck {
+        + checkRentalEligibility(age : int, specialLicense : boolean) : void
+    }
+    class ElectricVehicle {
+        + {static} MINIMUM_BATTERY_PERCENT : int
+        - batteryPercent : int
+        + getBatteryPercent() : int
+        + checkRentalEligibility(age : int, specialLicense : boolean) : void
+    }
+
+    Vehicle <|-- Car
+    Vehicle <|-- Van
+    Vehicle <|-- Motorcycle
+    Vehicle <|-- Truck
+    Vehicle <|-- ElectricVehicle
 
     enum RentalStatus {
         ACTIVE
@@ -45,6 +69,14 @@ package "domain" {
         - status : RentalStatus
         + isActive() : boolean
         + complete() : void
+    }
+
+    class RentalReceipt {
+        - rentalId : String
+        - returnDate : LocalDate
+        - baseCost : BigDecimal
+        - lateFee : BigDecimal
+        + getTotal() : BigDecimal
     }
 
     Vehicle --> VehicleStatus
@@ -84,6 +116,8 @@ package "validation <<Strategy>>" {
         - customerEmail : String
         - startDate : LocalDate
         - endDate : LocalDate
+        - customerAge : int
+        - specialLicenseHeld : boolean
     }
 
     interface RentalValidationRule {
@@ -97,6 +131,7 @@ package "validation <<Strategy>>" {
     }
 
     class NoOverlapRule
+    class TypeSpecificRule
 
     class RentalValidator {
         + validate(request : RentalRequest) : void
@@ -104,9 +139,23 @@ package "validation <<Strategy>>" {
 
     RentalValidationRule <|.. DurationLimitRule
     RentalValidationRule <|.. NoOverlapRule
+    RentalValidationRule <|.. TypeSpecificRule
     RentalValidator o--> "*" RentalValidationRule
     NoOverlapRule --> RentalRepository
+    TypeSpecificRule ..> Vehicle : delegates rules
     RentalRequest --> Vehicle
+}
+
+package "billing <<Strategy>>" {
+    interface PricingStrategy {
+        + baseCost(rental : Rental) : BigDecimal
+        + lateFee(rental : Rental, actualReturnDate : LocalDate) : BigDecimal
+    }
+    class StandardPricingStrategy {
+        + {static} LATE_PENALTY_MULTIPLIER : BigDecimal
+    }
+    PricingStrategy <|.. StandardPricingStrategy
+    StandardPricingStrategy ..> Rental
 }
 
 package "notification <<Observer>>" {
@@ -148,7 +197,11 @@ package "service" {
     }
 
     class RentalService {
-        + rentVehicle(vehicleId : String, customerName : String,\n customerEmail : String, startDate : LocalDate,\n endDate : LocalDate) : Rental
+        + rentVehicle(..., age : int, specialLicense : boolean) : Rental
+    }
+
+    class ReturnService {
+        + returnVehicle(rentalId : String, actualReturnDate : LocalDate) : RentalReceipt
     }
 
     class ExpiryReminderService {
@@ -162,6 +215,11 @@ package "service" {
     RentalService --> RentalRepository
     RentalService --> RentalValidator
     RentalService --> AuthService
+    ReturnService --> VehicleRepository
+    ReturnService --> RentalRepository
+    ReturnService --> AuthService
+    ReturnService --> PricingStrategy
+    ReturnService ..> RentalReceipt
     ExpiryReminderService --> RentalRepository
     ExpiryReminderService --> RentalExpiryPublisher
 }
@@ -174,6 +232,7 @@ package "presentation" {
     ConsoleApp --> AuthService
     ConsoleApp --> VehicleService
     ConsoleApp --> RentalService
+    ConsoleApp --> ReturnService
     ConsoleApp --> ExpiryReminderService
 }
 

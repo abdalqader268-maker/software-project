@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import edu.najah.vrms.domain.Car;
 import edu.najah.vrms.domain.Rental;
 import edu.najah.vrms.domain.Vehicle;
 import edu.najah.vrms.domain.VehicleStatus;
@@ -41,9 +42,9 @@ class NoOverlapRuleTest {
      */
     @BeforeEach
     void setUp() {
-        vehicle = new Vehicle("V-1", "NAB-1234", "Toyota", "Corolla",
+        vehicle = new Car("V-1", "NAB-1234", "Toyota", "Corolla",
                 new BigDecimal("35.00"), VehicleStatus.AVAILABLE);
-        otherVehicle = new Vehicle("V-2", "NAB-5678", "Hyundai", "Tucson",
+        otherVehicle = new Car("V-2", "NAB-5678", "Hyundai", "Tucson",
                 new BigDecimal("55.00"), VehicleStatus.AVAILABLE);
 
         InMemoryRentalRepository repository = new InMemoryRentalRepository();

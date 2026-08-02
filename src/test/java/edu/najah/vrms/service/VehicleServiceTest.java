@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import edu.najah.vrms.domain.Car;
 import edu.najah.vrms.domain.Vehicle;
 import edu.najah.vrms.domain.VehicleStatus;
 import edu.najah.vrms.persistence.InMemoryVehicleRepository;
@@ -28,7 +29,7 @@ class VehicleServiceTest {
      * @return the vehicle
      */
     private static Vehicle vehicle(String id, VehicleStatus status) {
-        return new Vehicle(id, "PLATE-" + id, "Brand", "Model",
+        return new Car(id, "PLATE-" + id, "Brand", "Model",
                 new BigDecimal("30.00"), status);
     }
 

@@ -57,13 +57,35 @@ public class RentalService {
     }
 
     /**
-     * Rents a vehicle to a customer (US2.1).
+     * Rents a vehicle to a customer using the default customer profile
+     * (US2.1). Convenience overload for vehicle types that impose no
+     * age or license restriction.
      *
      * @param vehicleId     id of the vehicle to rent
      * @param customerName  full name of the customer
      * @param customerEmail e-mail address of the customer
      * @param startDate     first rental day (inclusive)
      * @param endDate       last rental day (inclusive)
+     * @return the created, persisted rental record
+     * @see #rentVehicle(String, String, String, LocalDate, LocalDate, int, boolean)
+     */
+    public Rental rentVehicle(String vehicleId, String customerName, String customerEmail,
+                              LocalDate startDate, LocalDate endDate) {
+        return rentVehicle(vehicleId, customerName, customerEmail, startDate, endDate,
+                RentalRequest.DEFAULT_CUSTOMER_AGE, false);
+    }
+
+    /**
+     * Rents a vehicle to a customer (US2.1), enforcing every configured rule
+     * including the type-specific ones (US5.2).
+     *
+     * @param vehicleId          id of the vehicle to rent
+     * @param customerName       full name of the customer
+     * @param customerEmail      e-mail address of the customer
+     * @param startDate          first rental day (inclusive)
+     * @param endDate            last rental day (inclusive)
+     * @param customerAge        age of the customer in years
+     * @param specialLicenseHeld whether the customer holds a special license
      * @return the created, persisted rental record
      * @throws edu.najah.vrms.domain.exception.UnauthorizedActionException
      *         when no manager is logged in
@@ -75,7 +97,8 @@ public class RentalService {
      *         when the period breaks the duration rules
      */
     public Rental rentVehicle(String vehicleId, String customerName, String customerEmail,
-                              LocalDate startDate, LocalDate endDate) {
+                              LocalDate startDate, LocalDate endDate,
+                              int customerAge, boolean specialLicenseHeld) {
         authService.requireAuthentication();
 
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
@@ -87,8 +110,9 @@ public class RentalService {
                             + vehicle.getStatus() + ").");
         }
 
-        RentalRequest request =
-                new RentalRequest(vehicle, customerName, customerEmail, startDate, endDate);
+        RentalRequest request = new RentalRequest(
+                vehicle, customerName, customerEmail, startDate, endDate,
+                customerAge, specialLicenseHeld);
         rentalValidator.validate(request);
 
         Rental rental = new Rental(

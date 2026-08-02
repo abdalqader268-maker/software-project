@@ -3,13 +3,19 @@ package edu.najah.vrms.domain;
 import java.math.BigDecimal;
 
 /**
- * A vehicle that belongs to the rental fleet.
+ * Base type for every vehicle in the rental fleet.
  * <p>
  * Each vehicle carries the descriptive data shown in the catalog together
  * with its current {@link VehicleStatus}. Only vehicles whose status is
  * {@link VehicleStatus#AVAILABLE} may be rented.
+ * <p>
+ * {@code Vehicle} is abstract: concrete subtypes ({@link Car},
+ * {@link Motorcycle}, {@link Van}, {@link Truck}, {@link ElectricVehicle})
+ * describe their {@linkplain #getCategory() category} and, when needed,
+ * override {@link #checkRentalEligibility(int, boolean)} to enforce
+ * type-specific rental rules (US5.1, US5.2).
  */
-public class Vehicle {
+public abstract class Vehicle {
 
     /** Unique identifier of the vehicle inside the system (e.g. {@code V-1}). */
     private final String id;
@@ -39,14 +45,40 @@ public class Vehicle {
      * @param dailyRate   price charged per rental day
      * @param status      initial {@link VehicleStatus}
      */
-    public Vehicle(String id, String plateNumber, String brand, String model,
-                   BigDecimal dailyRate, VehicleStatus status) {
+    protected Vehicle(String id, String plateNumber, String brand, String model,
+                      BigDecimal dailyRate, VehicleStatus status) {
         this.id = id;
         this.plateNumber = plateNumber;
         this.brand = brand;
         this.model = model;
         this.dailyRate = dailyRate;
         this.status = status;
+    }
+
+    /**
+     * Returns the human readable category of this vehicle type, e.g.
+     * {@code "Car"} or {@code "Truck"}. Shown in the catalog and used in
+     * reports.
+     *
+     * @return the vehicle category label
+     */
+    public abstract String getCategory();
+
+    /**
+     * Enforces the rules that are specific to this vehicle type (US5.2).
+     * <p>
+     * The default implementation imposes no extra restriction; subtypes such
+     * as {@link Truck}, {@link Motorcycle} and {@link ElectricVehicle} override
+     * it to validate a special license, a minimum rider age or the battery
+     * charge respectively. Implementations throw a domain exception when the
+     * rental must be rejected.
+     *
+     * @param customerAge        age of the customer in years
+     * @param specialLicenseHeld {@code true} when the customer holds a special
+     *                           driving license
+     */
+    public void checkRentalEligibility(int customerAge, boolean specialLicenseHeld) {
+        // No type-specific restriction by default.
     }
 
     /**
