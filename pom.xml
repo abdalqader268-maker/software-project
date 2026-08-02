@@ -30,9 +30,7 @@
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <!-- The interactive console UI is exercised manually, not unit tested. -->
         <sonar.coverage.exclusions>**/presentation/**</sonar.coverage.exclusions>
-        <sonar.coverage.jacoco.xmlReportPaths>
-            ${project.build.directory}/site/jacoco/jacoco.xml
-        </sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
 
     <dependencyManagement>

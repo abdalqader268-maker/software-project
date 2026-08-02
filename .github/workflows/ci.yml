@@ -29,9 +29,6 @@ jobs:
           java-version: 17
           cache: maven
 
-      - name: Build, test and coverage
-        run: ./mvnw --batch-mode verify
-
       - name: Cache SonarCloud packages
         if: env.SONAR_TOKEN != ''
         uses: actions/cache@v4
@@ -40,15 +37,21 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: SonarCloud scan
-        # Runs only once the SONAR_TOKEN secret is configured, so the pipeline
-        # stays green before SonarCloud is set up.
+      - name: Build, test and analyze
+        # Runs verify (tests + JaCoCo report) and the SonarCloud scan in one
+        # Maven reactor so coverage is picked up.
         if: env.SONAR_TOKEN != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          ./mvnw --batch-mode
+          ./mvnw --batch-mode verify
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+
+      - name: Build and test
+        # Fallback when SonarCloud is not configured, so the pipeline stays
+        # green before the SONAR_TOKEN secret is added.
+        if: env.SONAR_TOKEN == ''
+        run: ./mvnw --batch-mode verify
 
       - name: Upload JaCoCo coverage report
         uses: actions/upload-artifact@v4
