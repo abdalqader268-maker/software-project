@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import edu.najah.vrms.domain.Rental;
 
@@ -36,7 +35,7 @@ public class InMemoryRentalRepository implements RentalRepository {
         return rentalsById.values().stream()
                 .filter(Rental::isActive)
                 .filter(rental -> rental.getVehicle().getId().equals(vehicleId))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /** {@inheritDoc} */

@@ -1,7 +1,6 @@
 package edu.najah.vrms.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import edu.najah.vrms.domain.Vehicle;
 import edu.najah.vrms.persistence.VehicleRepository;
@@ -33,7 +32,7 @@ public class VehicleService {
     public List<Vehicle> getAvailableVehicles() {
         return vehicleRepository.findAll().stream()
                 .filter(Vehicle::isAvailable)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**

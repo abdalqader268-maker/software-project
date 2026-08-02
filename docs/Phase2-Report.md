@@ -70,11 +70,43 @@ scan on every push and pull request once the `SONAR_TOKEN` secret is present.
 
 ## 3. Code Smells & Refactoring
 
-At least three code smells identified from the analysis and how each was
-handled. Every change was made against the green test suite (57 tests) so it is
+SonarCloud's first analysis reported **42 code smells** (0 bugs, 0
+vulnerabilities), all of severity *Major*, spread over just two rules:
+
+| Rule | Description | Count |
+|------|-------------|------:|
+| `java:S6204` | `collect(Collectors.toList())` should be `Stream.toList()` | 3 |
+| `java:S106` | Standard output should not be used to log | 39 |
+
+Every change below was made against the green test suite (57 tests), so it is
 behavior-preserving.
 
-### Smell 1 — Duplicated string literal / format (`java:S1192`)
+### Smell 1 — `Collectors.toList()` instead of `Stream.toList()` (`java:S6204`)
+
+**Where:** `VehicleService`, `InMemoryRentalRepository`, `VehicleServiceTest`.
+
+**Before:**
+
+```java
+return vehicleRepository.findAll().stream()
+        .filter(Vehicle::isAvailable)
+        .collect(Collectors.toList());
+```
+
+**After** — Java 16+ `Stream.toList()`; the now-unused `Collectors` import was
+removed too:
+
+```java
+return vehicleRepository.findAll().stream()
+        .filter(Vehicle::isAvailable)
+        .toList();
+```
+
+**Decision:** Accepted — shorter, returns an unmodifiable list, and removes a
+dependency on `Collectors`. Fixed all 3 occurrences → these smells disappear on
+the next analysis.
+
+### Smell 2 — Duplicated string literal / format (`java:S1192`, DRY)
 
 **Where:** `presentation/ConsoleApp.java`, bill printing.
 
@@ -101,34 +133,22 @@ private void printMoneyLine(String label, BigDecimal amount) {
 **Decision:** Accepted — the currency format lives in one place; a change to it
 now touches a single method.
 
-### Smell 2 — "Standard output should not be used to log" (`java:S106`)
+### Smell 3 — "Standard output should not be used to log" (`java:S106`)
 
-**Where:** every `System.out.println` / `printf` in `ConsoleApp`.
+**Where:** every `System.out.println` / `printf` in `ConsoleApp` (39 issues).
 
 **Analysis:** SonarCloud flags direct use of `System.out`. Here the class *is*
 the interactive console UI — printing to standard output is its purpose, not
-incidental logging.
+incidental logging. Introducing a logging framework for a teaching console app
+would be over-engineering (YAGNI).
 
-**Decision:** Reviewed and kept, marked *Won't Fix* in SonarCloud with the
-justification above. The presentation layer is also excluded from coverage
-(`sonar.coverage.exclusions`) because it is exercised manually, not by unit
-tests. Introducing a logging framework for a teaching console app would be
-over-engineering (YAGNI).
+**Decision:** Reviewed and **Accepted / Won't Fix** in SonarCloud (bulk action
+on the 39 issues) with the justification above. The presentation layer is also
+excluded from coverage (`sonar.coverage.exclusions`) because it is exercised
+manually, not by unit tests.
 
-### Smell 3 — Long parameter list / primitive obsession (`java:S107`)
-
-**Where:** `RentalService.rentVehicle(vehicleId, name, email, start, end, age,
-specialLicense)` and `RentalRequest`'s full constructor.
-
-**Analysis:** The rental entry points carry seven parameters, several of them
-customer attributes (`name`, `email`, `age`, `specialLicense`).
-
-**Decision:** Considered introducing a `CustomerProfile` value object to group
-the customer fields. Deferred for now: only two call sites exist (the console
-UI and the tests), and the immutable `RentalRequest` already documents each
-field. A parameter object would add a class without a caller that currently
-benefits — it is recorded here as the planned refactoring if more customer
-fields are added.
+> **Result:** open code smells go from **42 → 39** after fixing `S6204`, then to
+> **0 open** after accepting the `S106` issues — the "after" dashboard.
 
 ---
 

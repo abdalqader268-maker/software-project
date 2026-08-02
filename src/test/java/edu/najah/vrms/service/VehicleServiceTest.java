@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,7 +45,7 @@ class VehicleServiceTest {
         List<String> shownIds = service.getAvailableVehicles().stream()
                 .map(Vehicle::getId)
                 .sorted()
-                .collect(Collectors.toList());
+                .toList();
 
         assertEquals(List.of("V-1", "V-4"), shownIds);
     }
