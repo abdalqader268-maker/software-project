@@ -13,7 +13,9 @@ jobs:
     env:
       # Surfaced as a job-level env var so the SonarCloud steps below can be
       # skipped with `if: env.SONAR_TOKEN != ''` until the secret is added.
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      # Accepts either the conventional SONAR_TOKEN secret or the project's
+      # SOFTWAREPROJ secret, whichever is set.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN || secrets.SOFTWAREPROJ }}
 
     steps:
       - name: Checkout sources
