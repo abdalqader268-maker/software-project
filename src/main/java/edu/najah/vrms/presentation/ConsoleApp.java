@@ -8,8 +8,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
+import edu.najah.vrms.billing.StandardPricingStrategy;
+import edu.najah.vrms.domain.Car;
+import edu.najah.vrms.domain.ElectricVehicle;
 import edu.najah.vrms.domain.Manager;
+import edu.najah.vrms.domain.Motorcycle;
 import edu.najah.vrms.domain.Rental;
+import edu.najah.vrms.domain.RentalReceipt;
+import edu.najah.vrms.domain.Truck;
 import edu.najah.vrms.domain.Vehicle;
 import edu.najah.vrms.domain.VehicleStatus;
 import edu.najah.vrms.notification.ConsoleEmailService;
@@ -23,17 +29,19 @@ import edu.najah.vrms.persistence.VehicleRepository;
 import edu.najah.vrms.service.AuthService;
 import edu.najah.vrms.service.ExpiryReminderService;
 import edu.najah.vrms.service.RentalService;
+import edu.najah.vrms.service.ReturnService;
 import edu.najah.vrms.service.VehicleService;
 import edu.najah.vrms.validation.DurationLimitRule;
 import edu.najah.vrms.validation.NoOverlapRule;
 import edu.najah.vrms.validation.RentalValidator;
+import edu.najah.vrms.validation.TypeSpecificRule;
 
 /**
  * Console entry point of the Vehicle Rental Management System.
  * <p>
  * Wires the layers together (presentation, service, domain, persistence),
  * seeds demo data and exposes a small interactive menu covering the Phase 1
- * user stories.
+ * and Phase 2 user stories.
  */
 public final class ConsoleApp {
 
@@ -55,8 +63,11 @@ public final class ConsoleApp {
     /** Catalog service (US1.3). */
     private final VehicleService vehicleService;
 
-    /** Rental workflow service (US2.x). */
+    /** Rental workflow service (US2.x, US5.x). */
     private final RentalService rentalService;
+
+    /** Returns and billing service (US4.x). */
+    private final ReturnService returnService;
 
     /** Reminder service (US3.1). */
     private final ExpiryReminderService reminderService;
@@ -81,8 +92,12 @@ public final class ConsoleApp {
                 rentalRepository,
                 new RentalValidator(Arrays.asList(
                         new DurationLimitRule(clock, MIN_RENTAL_DAYS, MAX_RENTAL_DAYS),
-                        new NoOverlapRule(rentalRepository))),
+                        new NoOverlapRule(rentalRepository),
+                        new TypeSpecificRule())),
                 authService);
+        this.returnService = new ReturnService(
+                vehicleRepository, rentalRepository, authService,
+                new StandardPricingStrategy());
 
         RentalExpiryPublisher publisher = new RentalExpiryPublisher();
         publisher.subscribe(new EmailReminderObserver(new ConsoleEmailService()));
@@ -103,7 +118,8 @@ public final class ConsoleApp {
     }
 
     /**
-     * Stores the demo manager account and a small demo fleet.
+     * Stores the demo manager account and a small mixed demo fleet covering
+     * every vehicle type (US5.1).
      *
      * @param managerRepository target for the demo manager
      * @param vehicleRepository target for the demo fleet
@@ -112,14 +128,16 @@ public final class ConsoleApp {
                           VehicleRepository vehicleRepository) {
         managerRepository.save(new Manager("admin", "admin123", "Fleet Manager"));
 
-        vehicleRepository.save(new Vehicle("V-1", "NAB-1234", "Toyota", "Corolla",
+        vehicleRepository.save(new Car("V-1", "NAB-1234", "Toyota", "Corolla",
                 new BigDecimal("35.00"), VehicleStatus.AVAILABLE));
-        vehicleRepository.save(new Vehicle("V-2", "NAB-5678", "Hyundai", "Tucson",
+        vehicleRepository.save(new Car("V-2", "NAB-5678", "Hyundai", "Tucson",
                 new BigDecimal("55.00"), VehicleStatus.AVAILABLE));
-        vehicleRepository.save(new Vehicle("V-3", "NAB-9012", "Kia", "Picanto",
-                new BigDecimal("25.00"), VehicleStatus.UNDER_MAINTENANCE));
-        vehicleRepository.save(new Vehicle("V-4", "NAB-3456", "Ford", "Transit",
-                new BigDecimal("70.00"), VehicleStatus.AVAILABLE));
+        vehicleRepository.save(new Motorcycle("V-3", "NAB-9012", "Honda", "CB500",
+                new BigDecimal("40.00"), VehicleStatus.AVAILABLE));
+        vehicleRepository.save(new Truck("V-4", "NAB-3456", "Volvo", "FH16",
+                new BigDecimal("120.00"), VehicleStatus.AVAILABLE));
+        vehicleRepository.save(new ElectricVehicle("V-5", "NAB-7890", "Tesla", "Model 3",
+                new BigDecimal("90.00"), VehicleStatus.AVAILABLE, 85));
     }
 
     /**
@@ -153,7 +171,8 @@ public final class ConsoleApp {
         System.out.println("2) Logout");
         System.out.println("3) View available vehicles");
         System.out.println("4) Rent a vehicle");
-        System.out.println("5) Generate expiry reminders");
+        System.out.println("5) Return a vehicle");
+        System.out.println("6) Generate expiry reminders");
         System.out.println("0) Exit");
         System.out.print("> ");
     }
@@ -180,6 +199,9 @@ public final class ConsoleApp {
                 rentVehicle();
                 return true;
             case "5":
+                returnVehicle();
+                return true;
+            case "6":
                 generateReminders();
                 return true;
             case "0":
@@ -213,14 +235,14 @@ public final class ConsoleApp {
         }
         System.out.println("Available vehicles:");
         for (Vehicle vehicle : vehicles) {
-            System.out.printf("  %-5s %-10s %-8s %-10s %8s USD/day%n",
+            System.out.printf("  %-5s %-12s %-8s %-10s %-10s %8s USD/day%n",
                     vehicle.getId(), vehicle.getPlateNumber(), vehicle.getBrand(),
-                    vehicle.getModel(), vehicle.getDailyRate());
+                    vehicle.getModel(), vehicle.getCategory(), vehicle.getDailyRate());
         }
     }
 
     /**
-     * Interactive rent flow (US2.1 - US2.3).
+     * Interactive rent flow (US2.1 - US2.3, US5.2).
      */
     private void rentVehicle() {
         System.out.print("Vehicle id: ");
@@ -229,13 +251,41 @@ public final class ConsoleApp {
         String customerName = scanner.nextLine().trim();
         System.out.print("Customer e-mail: ");
         String customerEmail = scanner.nextLine().trim();
+        int customerAge = readInt("Customer age: ");
+        boolean specialLicense = readYesNo("Holds special (truck) license? (y/n): ");
         LocalDate start = readDate("Start date (YYYY-MM-DD): ");
         LocalDate end = readDate("End date   (YYYY-MM-DD): ");
 
         Rental rental = rentalService.rentVehicle(
-                vehicleId, customerName, customerEmail, start, end);
+                vehicleId, customerName, customerEmail, start, end,
+                customerAge, specialLicense);
         System.out.println("Rental " + rental.getId() + " created for "
                 + rental.getCustomerName() + " until " + rental.getEndDate() + ".");
+    }
+
+    /**
+     * Interactive return flow (US4.1 - US4.3).
+     */
+    private void returnVehicle() {
+        System.out.print("Rental id: ");
+        String rentalId = scanner.nextLine().trim();
+        LocalDate returnDate = readDate("Actual return date (YYYY-MM-DD): ");
+
+        RentalReceipt receipt = returnService.returnVehicle(rentalId, returnDate);
+        System.out.println("Vehicle returned. Bill for " + receipt.getRentalId() + ":");
+        printMoneyLine("Base cost", receipt.getBaseCost());
+        printMoneyLine("Late fee", receipt.getLateFee());
+        printMoneyLine("Total", receipt.getTotal());
+    }
+
+    /**
+     * Prints one aligned money line of a bill.
+     *
+     * @param label  the line label, e.g. {@code "Base cost"}
+     * @param amount the amount to show
+     */
+    private void printMoneyLine(String label, BigDecimal amount) {
+        System.out.printf("  %-10s %8s USD%n", label, amount);
     }
 
     /**
@@ -254,6 +304,37 @@ public final class ConsoleApp {
                 System.out.println("Invalid date format, expected YYYY-MM-DD.");
             }
         }
+    }
+
+    /**
+     * Reads a non-negative integer from the console, re-prompting on invalid
+     * input.
+     *
+     * @param prompt text shown before reading
+     * @return the parsed integer
+     */
+    private int readInt(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String raw = scanner.nextLine().trim();
+            try {
+                return Integer.parseInt(raw);
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a whole number.");
+            }
+        }
+    }
+
+    /**
+     * Reads a yes/no answer from the console.
+     *
+     * @param prompt text shown before reading
+     * @return {@code true} when the manager answers yes
+     */
+    private boolean readYesNo(String prompt) {
+        System.out.print(prompt);
+        String raw = scanner.nextLine().trim().toLowerCase();
+        return raw.startsWith("y");
     }
 
     /**

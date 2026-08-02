@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import edu.najah.vrms.domain.Car;
 import edu.najah.vrms.domain.Rental;
 import edu.najah.vrms.domain.Vehicle;
 import edu.najah.vrms.domain.VehicleStatus;
@@ -70,7 +71,7 @@ class ExpiryReminderServiceTest {
      * @return the stored rental
      */
     private Rental activeRentalEnding(String id, LocalDate end) {
-        Vehicle vehicle = new Vehicle("V-" + id, "PLATE-" + id, "Toyota", "Corolla",
+        Vehicle vehicle = new Car("V-" + id, "PLATE-" + id, "Toyota", "Corolla",
                 new BigDecimal("35.00"), VehicleStatus.RENTED);
         Rental rental = new Rental(id, vehicle, "Ahmad Ali", "ahmad@example.com",
                 TODAY.minusDays(5), end);
