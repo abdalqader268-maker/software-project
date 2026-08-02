@@ -1,4 +1,4 @@
-name: CI
+name: Build and Analyze
 
 on:
   push:
@@ -8,21 +8,47 @@ on:
 
 jobs:
   build:
+    name: Build, test and SonarCloud scan
     runs-on: ubuntu-latest
+    env:
+      # Surfaced as a job-level env var so the SonarCloud steps below can be
+      # skipped with `if: env.SONAR_TOKEN != ''` until the secret is added.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          # Full history so SonarCloud can assign issues to the right commits.
+          fetch-depth: 0
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 17
           cache: maven
 
-      - name: Build and run tests
+      - name: Build, test and coverage
         run: ./mvnw --batch-mode verify
+
+      - name: Cache SonarCloud packages
+        if: env.SONAR_TOKEN != ''
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: SonarCloud scan
+        # Runs only once the SONAR_TOKEN secret is configured, so the pipeline
+        # stays green before SonarCloud is set up.
+        if: env.SONAR_TOKEN != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          ./mvnw --batch-mode
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
 
       - name: Upload JaCoCo coverage report
         uses: actions/upload-artifact@v4

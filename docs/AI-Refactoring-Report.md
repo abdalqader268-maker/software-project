@@ -156,11 +156,35 @@ call sites as a side effect.
 
 ---
 
+---
+
+## Phase 2 Addendum
+
+Phase 2 added Returns & Billing (Sprint 4) and Vehicle Types & Polymorphism
+(Sprint 5). One AI-assisted refactoring was applied to the new code; the
+detailed code-smell analysis (including SonarCloud rules `java:S1192`,
+`java:S106` and `java:S107`) lives in
+[`Phase2-Report.md`](Phase2-Report.md).
+
+**Refactoring 3 — `ConsoleApp` bill printing (Extract Method, `java:S1192`)**
+
+The return flow printed three bill lines that repeated the same `printf`
+format and the `" USD"` literal. They were replaced by a single
+`printMoneyLine(label, amount)` helper, so the currency format is defined once.
+
+> **Prompt:** "These three `System.out.printf` calls in the return flow repeat
+> the same format string and the `USD` literal. Extract a small helper that
+> prints one labelled money line, without changing the printed output."
+
+**Decision:** Accepted — removes the duplicated literal/format with no change to
+the produced text.
+
 ## Verification
 
 ```
-mvnw test  →  Tests run: 33, Failures: 0, Errors: 0, Skipped: 0  →  BUILD SUCCESS
+Phase 1:  mvnw test  →  Tests run: 33, Failures: 0  →  BUILD SUCCESS
+Phase 2:  mvnw verify →  Tests run: 57, Failures: 0  →  BUILD SUCCESS
 ```
 
-Because the same 33 tests pass before and after, the refactorings are
-behavior-preserving: the code is cleaner, and what it does is unchanged.
+Because the same suite passes before and after each change, the refactorings
+are behavior-preserving: the code is cleaner, and what it does is unchanged.
